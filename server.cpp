@@ -62,6 +62,7 @@ void handleClient(int clientSocket) {
             } else if (message.substr(0, 5) == "/join") {
                 // Join a channel
                 string channel = message.substr(6);
+                cout << "joining channel: " << channel << endl;
                 if (channels.count(channel) == 0) {
                     treatChannelName(channel);
                     // Create new channel if it doesn't exist
@@ -85,6 +86,7 @@ void handleClient(int clientSocket) {
             }
             else if (message.substr(0, 9) == "/nickname") {
                 clients[clientSocket].nickname = message.substr(10);
+                cout << "new client: " << clients[clientSocket].nickname << endl;
             }
             else if (message.substr(0, 5) == "/kick") {
                 string kickedUser = message.substr(6);
@@ -249,7 +251,7 @@ int main() {
         clientThread.detach();
 
         // Send a welcome message to the new client
-        string welcomeMsg = "Welcome to the chat server!";
+        string welcomeMsg = "Welcome to the chat server! now type /nickname your_nickname";
         send(clientSocket, welcomeMsg.c_str(), welcomeMsg.length(), 0);
     }
     
