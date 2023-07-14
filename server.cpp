@@ -284,7 +284,6 @@ void printChannels(const map<string, vector<int>>& channels, const map<int, Clie
             const Client& client = clients.at(clientSocket);
 
             cout << "Client Socket: " << client.socket << endl;
-            // cout << "Channel: " << client.channel << endl;
             cout << "Nickname: " << client.nickname << endl;
             cout << "Mute: " << (client.mute ? "True" : "False") << endl;
 

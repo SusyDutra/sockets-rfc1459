@@ -101,8 +101,6 @@ int main() {
 
             cout << "Socket info: IP = " << ipBuffer << ", Port = " << port << endl;
 
-            // cout << "Connected to the server on socket " << clientSocket << endl;
-
             // Start receiving thread
             thread receiveThread(receiveMessages, clientSocket);
     
