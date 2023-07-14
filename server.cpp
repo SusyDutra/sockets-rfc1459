@@ -29,6 +29,8 @@ mutex clientMutex;
 map<int, Client> clients;
 map<string, vector<int>> channels;
 
+void printChannels(const map<string, vector<int>>& channels, const map<int, Client>& clients);
+
 void treatChannelName(string& newChannel){
     if(newChannel[0] != '#' && newChannel[0] != '&'){
         newChannel.insert(newChannel.begin(), '#');
@@ -60,14 +62,17 @@ void handleClient(int clientSocket) {
                 string response = "pong";
                 send(clientSocket, response.c_str(), response.length(), 0);
             } else if (message.substr(0, 5) == "/join") {
-                // Join a channel
                 string channel = message.substr(6);
-                cout << "joining channel: " << channel << endl;
-                if (channels.count(channel) == 0) {
-                    treatChannelName(channel);
+                treatChannelName(channel);
+
+                // Join a channel
+                if (channels[channel].empty()) {
                     // Create new channel if it doesn't exist
                     channels[channel] = vector<int>();
                 }
+
+                string userNickname = clients[clientSocket].nickname;
+                cout << userNickname << " joining channel: " << channel << endl;
 
                 // Remove client from previous channel
                 lock_guard<mutex> lock(clientMutex);
@@ -83,6 +88,8 @@ void handleClient(int clientSocket) {
                 // lock_guard<mutex> lock(clientMutex);
                 clients[clientSocket].channel = channel;
                 channels[channel].push_back(clientSocket);
+
+                printChannels(channels, clients);
             }
             else if (message.substr(0, 9) == "/nickname") {
                 clients[clientSocket].nickname = message.substr(10);
@@ -152,22 +159,29 @@ void handleClient(int clientSocket) {
                 }
             }
             else {
-                // Broadcast message to clients in the same channel
                 message = clients[clientSocket].nickname + ": " + message;
-                lock_guard<mutex> lock(clientMutex);
-                string channel = clients[clientSocket].channel;
-                for (int client : channels[channel]) {
-                    size_t pos = 0;
-                    while (pos < message.length()) {
-                        string chunk = message.substr(pos, MAX_BUFFER_SIZE - 1);
-                        ssize_t bytesSent = send(client, chunk.c_str(), chunk.length(), 0);
-                        if (bytesSent == -1) {
-                            std::cerr << "Failed to send message." << std::endl;
-                            break;
+                if(!clients[clientSocket].mute) {
+                    // Broadcast message to clients in the same channel
+                    lock_guard<mutex> lock(clientMutex);
+                    string channel = clients[clientSocket].channel;
+                    for (int client : channels[channel]) {
+                        if(client != clientSocket){
+                            size_t pos = 0;
+                            while (pos < message.length()) {
+                                string chunk = message.substr(pos, MAX_BUFFER_SIZE - 1);
+                                ssize_t bytesSent = send(client, chunk.c_str(), chunk.length(), 0);
+                                if (bytesSent == -1) {
+                                    cout << "Failed to send message." << endl;
+                                    break;
+                                }
+                                pos += chunk.length();
+                            }
                         }
-                        pos += chunk.length();
                     }
-
+                }
+                else {
+                    string response = "message not sent, you are muted";
+                    send(clientSocket, response.c_str(), response.length(), 0);
                 }
                 numAttempts = 0;  // Reset attempts
             }
@@ -221,7 +235,7 @@ int main() {
         cerr << "Failed to bind socket." << endl;
         return 1;
     }
-    
+
     // Listen for incoming connections
     if (listen(serverSocket, 10) == -1) {
         cerr << "Failed to listen on socket." << endl;
@@ -251,9 +265,32 @@ int main() {
         clientThread.detach();
 
         // Send a welcome message to the new client
-        string welcomeMsg = "Welcome to the chat server! now type /nickname your_nickname";
+        string welcomeMsg = "Welcome to the chat server! now type /nickname your_nickname ";
+
         send(clientSocket, welcomeMsg.c_str(), welcomeMsg.length(), 0);
     }
-    
+
     return 0;
+}
+
+void printChannels(const map<string, vector<int>>& channels, const map<int, Client>& clients) {
+    for (const auto& channelPair : channels) {
+        const string& channel = channelPair.first;
+        const vector<int>& clientSockets = channelPair.second;
+
+        cout << "Channel: " << channel << endl;
+
+        for (int clientSocket : clientSockets) {
+            const Client& client = clients.at(clientSocket);
+
+            cout << "Client Socket: " << client.socket << endl;
+            // cout << "Channel: " << client.channel << endl;
+            cout << "Nickname: " << client.nickname << endl;
+            cout << "Mute: " << (client.mute ? "True" : "False") << endl;
+
+            cout << "-----" << endl;
+        }
+
+        cout << endl;
+    }
 }

@@ -70,7 +70,7 @@ int main() {
 
     char buffer[MAX_BUFFER_SIZE];
 
-    cout << "Digite o comando desejado: /connect para se conectar ao servidor ou /quit para encerrar o programa" << endl;
+    cout << "Enter the desired command: /connect to connect to the server or /quit to terminate the program" << endl;
 
     while (true) {
         string command;
@@ -85,11 +85,23 @@ int main() {
 
             // Connect to the server
             if (connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1) {
-                cerr << "Failed to connect to server." << endl;
+                cout << "Failed to connect to server." << endl;
                 return 1;
             }
 
-            cout << "Connected to the server on socket " << clientSocket << endl;
+            socklen_t addrLen = sizeof(serverAddr);
+            // Obtém as informações do socket associado ao descritor de arquivo
+            if (getsockname(clientSocket, (struct sockaddr*)&serverAddr, &addrLen) == -1) {
+                cout << "Failed to get socket information." << endl;
+                return 1;
+            }
+            char ipBuffer[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &(serverAddr.sin_addr), ipBuffer, INET_ADDRSTRLEN);
+            int port = ntohs(serverAddr.sin_port);
+
+            cout << "Socket info: IP = " << ipBuffer << ", Port = " << port << endl;
+
+            // cout << "Connected to the server on socket " << clientSocket << endl;
 
             // Start receiving thread
             thread receiveThread(receiveMessages, clientSocket);
