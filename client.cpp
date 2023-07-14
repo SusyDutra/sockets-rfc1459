@@ -89,7 +89,7 @@ int main() {
                 return 1;
             }
 
-            cout << "Connected to the server." << endl;
+            cout << "Connected to the server on socket " << clientSocket << endl;
 
             // Start receiving thread
             thread receiveThread(receiveMessages, clientSocket);
