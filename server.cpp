@@ -99,7 +99,6 @@ void handleClient(int clientSocket) {
                 }
 
                 // Add client to new channel
-                // lock_guard<mutex> lock(clientMutex);
                 clients[clientSocket].channel = channel;
                 channels[channel].push_back(clientSocket);
 
@@ -112,7 +111,7 @@ void handleClient(int clientSocket) {
             else if (message.substr(0, 5) == "/kick") {
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
-                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    sendMessage(clientSocket, "Command valid only for admin user");
                     continue;
                 }
 
@@ -145,7 +144,7 @@ void handleClient(int clientSocket) {
             else if (message.substr(0, 5) == "/mute") {
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
-                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    sendMessage(clientSocket, "Command valid only for admin user");
                     continue;
                 }
 
@@ -178,7 +177,7 @@ void handleClient(int clientSocket) {
             else if (message.substr(0, 7) == "/unmute") {
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
-                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    sendMessage(clientSocket, "Command valid only for admin user");
                     continue;
                 }
 
@@ -209,7 +208,7 @@ void handleClient(int clientSocket) {
             } else if (message.substr(0, 6) == "/whois"){
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
-                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    sendMessage(clientSocket, "Command valid only for admin user");
                     continue;
                 }
 
@@ -288,6 +287,8 @@ void handleClient(int clientSocket) {
 
 void signalHandler(int signal) {
     if (signal == SIGINT) {
+        cout << "\033[2K\r";  // Apaga a linha atual
+        cout.flush();  // Limpa o buffer de saída
         cout << "Server shutting down..." << endl;
         exit(0);
     }
@@ -336,7 +337,7 @@ int main() {
             continue;
         }
 
-        // Obter o endereço IP do cliente
+        // Get client IP
         string clientIP = inet_ntoa(clientAddr.sin_addr);
 
         // Create a new client structure
@@ -350,11 +351,6 @@ int main() {
         // Start a new thread to handle the client
         thread clientThread(handleClient, clientSocket);
         clientThread.detach();
-
-        // Send a welcome message to the new client
-        // string welcomeMsg = "Welcome to the chat server! now type /nickname your_nickname ";
-
-        // send(clientSocket, welcomeMsg.c_str(), welcomeMsg.length(), 0);
     }
 
     return 0;
