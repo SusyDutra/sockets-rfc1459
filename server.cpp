@@ -23,6 +23,7 @@ struct Client {
     string channel;
     string nickname;
     bool mute = false;
+    string ipAddres;
 };
 
 mutex clientMutex;
@@ -44,6 +45,19 @@ void treatChannelName(string& newChannel){
     }
 }
 
+void sendMessage(int clientSocket, const string& message) {
+    size_t pos = 0;
+    while (pos < message.length()) {
+        string chunk = message.substr(pos, MAX_BUFFER_SIZE - 1);
+        ssize_t bytesSent = send(clientSocket, chunk.c_str(), chunk.length(), 0);
+        if (bytesSent == -1) {
+            cerr << "Failed to send message." << endl;
+            break;
+        }
+        pos += chunk.length();
+    }
+}
+
 void handleClient(int clientSocket) {
     char buffer[MAX_BUFFER_SIZE];
     int numAttempts = 0;
@@ -59,8 +73,7 @@ void handleClient(int clientSocket) {
                 break;
             } else if (message == "/ping") {
                 // Respond with "pong" for "/ping" command
-                string response = "pong";
-                send(clientSocket, response.c_str(), response.length(), 0);
+                sendMessage(clientSocket, "pong");
             } else if (message.substr(0, 5) == "/join") {
                 string channel = message.substr(6);
                 treatChannelName(channel);
@@ -69,6 +82,7 @@ void handleClient(int clientSocket) {
                 if (channels[channel].empty()) {
                     // Create new channel if it doesn't exist
                     channels[channel] = vector<int>();
+                    cout << "Channel " << channel << " created!" << endl;
                 }
 
                 string userNickname = clients[clientSocket].nickname;
@@ -93,14 +107,22 @@ void handleClient(int clientSocket) {
             }
             else if (message.substr(0, 9) == "/nickname") {
                 clients[clientSocket].nickname = message.substr(10);
-                cout << "new client: " << clients[clientSocket].nickname << endl;
+                cout << "New client: " << clients[clientSocket].nickname << endl;
             }
             else if (message.substr(0, 5) == "/kick") {
-                string kickedUser = message.substr(6);
+                string userChannel = clients[clientSocket].channel;
+                if (channels[userChannel][0] != clientSocket) {
+                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    continue;
+                }
 
+                string kickedUser = message.substr(6);
                 lock_guard<mutex> lock(clientMutex);
 
-                string userChannel = clients[clientSocket].channel;
+                string message = message = "The user " + kickedUser + " has been banned!";
+                for(int client : channels[userChannel]){
+                    sendMessage(client, message);
+                }
 
                 // search the socket of the user the client wants to kick
                 int kickedUserSocket = -1;
@@ -114,14 +136,21 @@ void handleClient(int clientSocket) {
                 auto it = find(channels[userChannel].begin(), channels[userChannel].end(), kickedUserSocket);
                 if (it != channels[userChannel].end()) {
                     channels[userChannel].erase(it);
+                    sendMessage(kickedUserSocket, "You have been banned by the administrator!");
+                    close(kickedUserSocket);
+                } else {
+                    sendMessage(clientSocket, "User not found!");
                 }
             }
             else if (message.substr(0, 5) == "/mute") {
-                string mutedUser = message.substr(6);
-
-                lock_guard<mutex> lock(clientMutex);
-
                 string userChannel = clients[clientSocket].channel;
+                if (channels[userChannel][0] != clientSocket) {
+                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    continue;
+                }
+
+                string mutedUser = message.substr(6);
+                lock_guard<mutex> lock(clientMutex);
 
                 // search the socket of the user the client wants to mute
                 int mutedUserSocket = -1;
@@ -135,14 +164,25 @@ void handleClient(int clientSocket) {
                 auto it = find(channels[userChannel].begin(), channels[userChannel].end(), mutedUserSocket);
                 if (it != channels[userChannel].end()) {
                     clients[*it].mute = true;
+                    sendMessage(mutedUserSocket, "You have been muted :(");
+
+                    string message = "User " + mutedUser + " has been muted!";
+                    for (int client : channels[userChannel]) {
+                        sendMessage(client, message);
+                    }
+                    else {
+                        sendMessage(clientSocket, "User not found or already muted!");
                 }
             }
             else if (message.substr(0, 7) == "/unmute") {
-                string unmutedUser = message.substr(8);
-
-                lock_guard<mutex> lock(clientMutex);
-
                 string userChannel = clients[clientSocket].channel;
+                if (channels[userChannel][0] != clientSocket) {
+                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    continue;
+                }
+
+                string unmutedUser = message.substr(8);
+                lock_guard<mutex> lock(clientMutex);
 
                 // search the socket of the user the client wants to unmute
                 int unmutedUserSocket = -1;
@@ -156,7 +196,45 @@ void handleClient(int clientSocket) {
                 auto it = find(channels[userChannel].begin(), channels[userChannel].end(), unmutedUserSocket);
                 if (it != channels[userChannel].end()) {
                     clients[*it].mute = false;
+                    sendMessage(unmutedUserSocket, "You are no longer muted :)");
+
+                    string message = "User " + unmutedUser + " is no longer muted!";
+                    for (int client : channels[userChannel]) {
+                        sendMessage(client, message);
+                    }
+                } else {
+                    sendMessage(clientSocket, "User not found or not muted!");
                 }
+            } else if (message.substr(0, 6) == "/whois"){
+                string userChannel = clients[clientSocket].channel;
+                if (channels[userChannel][0] != clientSocket) {
+                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    continue;
+                }
+
+                string wantedUser = message.substr(7);
+                lock_guard<mutex> lock(clientMutex);
+
+                // search the socket of the user the client wants to unmute
+                int wantedUserSocket = -1;
+                for(int i = 0; i < channels[userChannel].size(); i++){
+                    if(clients[channels[userChannel][i]].nickname == wantedUser){
+                        wantedUserSocket = clients[channels[userChannel][i]].socket;
+                        break;
+                    }
+                }
+
+                // search for that socket on the user's channel
+                string userIp;
+                auto it = find(channels[userChannel].begin(), channels[userChannel].end(), wantedUserSocket);
+                if (it != channels[userChannel].end()) {
+                    userIp = clients[*it].ipAddress;
+                    string message = "The IP address of " + wantedUser + " is: " + userIp;
+                    sendMessage(clientSocket, message);
+                } else {
+                    sendMessage(clientSocket, "User not found!");
+                }
+
             }
             else {
                 message = clients[clientSocket].nickname + ": " + message;

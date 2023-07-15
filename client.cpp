@@ -15,9 +15,10 @@ using namespace std;
 
 void signalHandler(int signal) {
     if (signal == SIGINT) {
-        //cout << "Ctrl+C (SIGINT) ignored." << endl;
         cout << "\033[2K\r";  // Apaga a linha atual
         cout.flush();  // Limpa o buffer de saída
+        cout << "Do you want to quit already? :(" << endl;
+        cout << "To do so, type /quit or press CTRL+D" << endl;
     }
 }
 
@@ -30,7 +31,7 @@ void receiveMessages(int clientSocket) {
             cout << "Server response: " << buffer << endl;
         } else if (bytesRead == 0) {
             cout << "Server closed the connection." << endl;
-            break;
+            exit(0);
         } else {
             cerr << "Error receiving response." << endl;
             break;
@@ -70,6 +71,7 @@ int main() {
 
     char buffer[MAX_BUFFER_SIZE];
 
+    cout << "Welcome to IRC Chat!" << endl;
     cout << "Enter the desired command: /connect to connect to the server or /quit to terminate the program" << endl;
 
     while (true) {
@@ -101,6 +103,20 @@ int main() {
 
             cout << "Socket info: IP = " << ipBuffer << ", Port = " << port << endl;
 
+            cout << "You need to choose a nickname, use the command /nickname for that" << endl;
+            getline(cin, command);
+            while (command.substr(0, 9) != "/nickname" || command.length() < 10) {
+                cout << "You need to choose a nickname before accessing other functionalities!" << endl;
+                cout << "Choose one using the /nickname command" << endl << endl;
+                getline(cin, command);
+            }
+            userNickname = command.substr(10);
+            sendMessage(clientSocket, command);
+
+            cout << endl << "Hello, " << userNickname << "! Welcome to the chat." << endl;
+            cout << "Enjoy chatting with other people." << endl << endl;
+            cout << "To join a channel, use the /join command" << endl;
+
             // Start receiving thread
             thread receiveThread(receiveMessages, clientSocket);
     
@@ -114,6 +130,30 @@ int main() {
                     sendMessage(clientSocket, message);
                     break;
                 }
+                 else if (message.substr(0, 5) == "/kick") {
+                    if (message.length() < 6) cout << "Incomplete command!" << endl;
+                    else if (message.substr(6) == userNickname) cout << "The command cannot be used on yourself!" << endl;
+                    else sendMessage(clientSocket, message);
+                } 
+                else if (message.substr(0, 5) == "/mute") {
+                    if (message.length() < 6) cout << "Incomplete command!" << endl;
+                    else if (message.substr(6) == userNickname) cout << "The command cannot be used on yourself!" << endl;
+                    else sendMessage(clientSocket, message);
+                }
+                else if (message.substr(0, 7) == "/unmute") {
+                    if (message.length() < 8) cout << "Incomplete command!" << endl;
+                    else if (message.substr(8) == userNickname) cout << "The command cannot be used on yourself!" << endl;
+                    else sendMessage(clientSocket, message);
+                }
+                else if (message.substr(0, 6) == "/whois") {
+                    if (message.length() < 7) cout << "Incomplete command!" << endl;
+                    else if (message.substr(7) == userNickname) cout << "The command cannot be used on yourself!" << endl;
+                    else sendMessage(clientSocket, message);
+                } 
+                else {
+                    // Send message to server
+                    sendMessage(clientSocket, message);
+                } 
         
                 // Send message to server
                 sendMessage(clientSocket, message);
