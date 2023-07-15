@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include <string>
+#include <sstream>
 #include <thread>
 #include <vector>
 #include <map>
@@ -31,6 +32,7 @@ map<int, Client> clients;
 map<string, vector<int>> channels;
 
 void printChannels(const map<string, vector<int>>& channels, const map<int, Client>& clients);
+vector<string> split(const string& str, char delimiter);
 
 void treatChannelName(string& newChannel){
     if(newChannel[0] != '#' && newChannel[0] != '&'){
@@ -70,7 +72,7 @@ void listChannels(int clientSocket) {
 void handleClient(int clientSocket) {
     char buffer[MAX_BUFFER_SIZE];
     int numAttempts = 0;
-    
+
     while (numAttempts < MAX_ATTEMPTS) {
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
@@ -255,6 +257,33 @@ void handleClient(int clientSocket) {
                 }
 
             }
+            else if (message.substr(0, 7) == "/invite") {
+                string userChannel = clients[clientSocket].channel;
+                if (channels[userChannel][0] != clientSocket) {
+                    sendMessage(clientSocket, "Command valid only for admin user");
+                    continue;
+                }
+
+                vector<string> substrings = split(message, ' ');
+                string invitedUser = substrings.at(1);
+
+                int invitedUserSocket = -1;
+                for (const auto& clientPair : clients) {
+                    const Client& client = clientPair.second;
+                    if (client.nickname == invitedUser) {
+                        invitedUserSocket = client.socket;
+                    }
+                }
+
+                if(invitedUserSocket == -1){
+                    sendMessage(clientSocket, "User not found at any channel");
+                }
+                else{ // redirect the command to client side (the invited client)
+                    string destChannel = substrings.at(2);
+                    string message = "/invite " + clients[clientSocket].nickname + " " + destChannel;
+                    sendMessage(invitedUserSocket, message);
+                }
+            }
             else {
                 message = clients[clientSocket].nickname + ": " + message;
                 if(!clients[clientSocket].mute) {
@@ -397,4 +426,16 @@ void printChannels(const map<string, vector<int>>& channels, const map<int, Clie
 
         cout << endl;
     }
+}
+
+vector<string> split(const string& str, char delimiter) {
+    vector<string> tokens;
+    stringstream ss(str);
+    string token;
+
+    while (getline(ss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
 }

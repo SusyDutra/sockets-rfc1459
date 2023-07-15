@@ -1,7 +1,9 @@
 #include <iostream>
 #include <cstring>
 #include <string>
+#include <sstream>
 #include <thread>
+#include <vector>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -11,7 +13,21 @@
 const int MAX_BUFFER_SIZE = 4096;
 const int SERVER_PORT = 8080;
 
+int clientSocket;
+
 using namespace std;
+
+vector<string> split(const string& str, char delimiter) {
+    vector<string> tokens;
+    stringstream ss(str);
+    string token;
+
+    while (getline(ss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
+}
 
 void signalHandler(int signal) {
     if (signal == SIGINT) {
@@ -19,24 +35,6 @@ void signalHandler(int signal) {
         cout.flush();  // Limpa o buffer de saída
         cout << "Do you want to quit already? :(" << endl;
         cout << "To do so, type /quit or press CTRL+D" << endl;
-    }
-}
-
-void receiveMessages(int clientSocket) {
-    char buffer[MAX_BUFFER_SIZE];
-    while (true) {
-        memset(buffer, 0, sizeof(buffer));
-        ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-        if (bytesRead > 0) {
-            cout << buffer << endl;
-        } else if (bytesRead == 0) {
-            cout << "Server closed the connection." << endl;
-            close(clientSocket);
-            exit(0);
-        } else {
-            cerr << "Error receiving response." << endl;
-            break;
-        }
     }
 }
 
@@ -53,8 +51,49 @@ void sendMessage(int clientSocket, const string& message) {
     }
 }
 
+void receiveMessages(int clientSocket) {
+    char buffer[MAX_BUFFER_SIZE];
+    while (true) {
+        memset(buffer, 0, sizeof(buffer));
+        ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if (bytesRead > 0) {
+            string message(buffer);
+            if(message.substr(0, 7) == "/invite") {
+                vector<string> substrings = split(message, ' ');
+                cout << "User " + substrings.at(1) + " is inviting you to channel " + substrings.at(2) << endl;
+                cout << "type y to accept invitation or n to decline" << endl;
+
+                string commandLine;
+                getline(cin, commandLine);
+
+                while (commandLine != "y" && commandLine != "n") {
+                    cout << "Invalid response. Type y to accept or n to decline" << endl;
+                    getline(cin, commandLine);
+                }
+
+                if (commandLine == "y") {
+                    message = "/join " + substrings.at(2);
+                    sendMessage(clientSocket, message);
+                }
+                else { // n
+                    cout << "n quero n" << endl;
+                }
+            }
+            else {
+                cout << buffer << endl;
+            }
+        } else if (bytesRead == 0) {
+            cout << "Server closed the connection." << endl;
+            close(clientSocket);
+            exit(0);
+        } else {
+            cerr << "Error receiving response." << endl;
+            break;
+        }
+    }
+}
+
 int main() {
-    int clientSocket;
     struct sockaddr_in serverAddr;
     
     // Create client socket
