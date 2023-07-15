@@ -23,7 +23,7 @@ struct Client {
     string channel;
     string nickname;
     bool mute = false;
-    string ipAddres;
+    string ipAddress;
 };
 
 mutex clientMutex;
@@ -170,8 +170,9 @@ void handleClient(int clientSocket) {
                     for (int client : channels[userChannel]) {
                         sendMessage(client, message);
                     }
-                    else {
-                        sendMessage(clientSocket, "User not found or already muted!");
+                }
+                else{
+                    sendMessage(clientSocket, "User not found or already muted!");
                 }
             }
             else if (message.substr(0, 7) == "/unmute") {
@@ -302,7 +303,7 @@ int main() {
         cerr << "Failed to create socket." << endl;
         return 1;
     }
-    
+
     // Set up server address
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
@@ -351,9 +352,9 @@ int main() {
         clientThread.detach();
 
         // Send a welcome message to the new client
-        string welcomeMsg = "Welcome to the chat server! now type /nickname your_nickname ";
+        // string welcomeMsg = "Welcome to the chat server! now type /nickname your_nickname ";
 
-        send(clientSocket, welcomeMsg.c_str(), welcomeMsg.length(), 0);
+        // send(clientSocket, welcomeMsg.c_str(), welcomeMsg.length(), 0);
     }
 
     return 0;

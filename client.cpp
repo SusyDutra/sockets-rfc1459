@@ -45,7 +45,7 @@ void sendMessage(int clientSocket, const string& message) {
         string chunk = message.substr(pos, MAX_BUFFER_SIZE - 1);
         ssize_t bytesSent = send(clientSocket, chunk.c_str(), chunk.length(), 0);
         if (bytesSent == -1) {
-            std::cerr << "Failed to send message." << std::endl;
+            cerr << "Failed to send message." << endl;
             break;
         }
         pos += chunk.length();
@@ -110,7 +110,7 @@ int main() {
                 cout << "Choose one using the /nickname command" << endl << endl;
                 getline(cin, command);
             }
-            userNickname = command.substr(10);
+            string userNickname = command.substr(10);
             sendMessage(clientSocket, command);
 
             cout << endl << "Hello, " << userNickname << "! Welcome to the chat." << endl;
@@ -130,11 +130,15 @@ int main() {
                     sendMessage(clientSocket, message);
                     break;
                 }
-                 else if (message.substr(0, 5) == "/kick") {
+                else if (message.substr(0, 5) == "/join") {
+                    if (message.length() < 6) cout << "Incomplete command!" << endl;
+                    else sendMessage(clientSocket, message);
+                }
+                else if (message.substr(0, 5) == "/kick") {
                     if (message.length() < 6) cout << "Incomplete command!" << endl;
                     else if (message.substr(6) == userNickname) cout << "The command cannot be used on yourself!" << endl;
                     else sendMessage(clientSocket, message);
-                } 
+                }
                 else if (message.substr(0, 5) == "/mute") {
                     if (message.length() < 6) cout << "Incomplete command!" << endl;
                     else if (message.substr(6) == userNickname) cout << "The command cannot be used on yourself!" << endl;
@@ -153,10 +157,7 @@ int main() {
                 else {
                     // Send message to server
                     sendMessage(clientSocket, message);
-                } 
-        
-                // Send message to server
-                sendMessage(clientSocket, message);
+                }
             }
 
             // Join the receive thread to ensure it has finished execution
