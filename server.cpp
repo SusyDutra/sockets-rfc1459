@@ -58,6 +58,15 @@ void sendMessage(int clientSocket, const string& message) {
     }
 }
 
+void listChannels(int clientSocket) {
+    string message = "Existing channels: ";
+    for (const auto& channelPair : channels) {
+        const string& channelName = channelPair.first;
+        message += channelName + "\n";
+    }
+    sendMessage(clientSocket, message);
+}
+
 void handleClient(int clientSocket) {
     char buffer[MAX_BUFFER_SIZE];
     int numAttempts = 0;
@@ -76,6 +85,9 @@ void handleClient(int clientSocket) {
                 // Respond with "pong" for "/ping" command
                 sendMessage(clientSocket, "pong");
             }
+            else if (message == "/list") {
+                listChannels(clientSocket);
+            } 
             else if (message.substr(0, 5) == "/join") {
                 string channel = message.substr(6);
                 treatChannelName(channel);
@@ -120,11 +132,6 @@ void handleClient(int clientSocket) {
                 string kickedUser = message.substr(6);
                 lock_guard<mutex> lock(clientMutex);
 
-                string message = message = "The user " + kickedUser + " has been banned!";
-                for(int client : channels[userChannel]){
-                    sendMessage(client, message);
-                }
-
                 // search the socket of the user the client wants to kick
                 int kickedUserSocket = -1;
                 for(int i = 0; i < channels[userChannel].size(); i++){
@@ -133,11 +140,20 @@ void handleClient(int clientSocket) {
                     }
                 }
 
+                cout << kickedUser << endl;
                 // search for that socket on the user's channel
                 auto it = find(channels[userChannel].begin(), channels[userChannel].end(), kickedUserSocket);
                 if (it != channels[userChannel].end()) {
                     channels[userChannel].erase(it);
-                    sendMessage(kickedUserSocket, "You have been banned by the administrator!");
+                    cout << kickedUser<< endl;
+                    
+                    string message = "The user " + kickedUser + " has been banned!";
+                    for (int client : channels[userChannel]){
+                        cout << message << endl;
+                        sendMessage(client, message);
+                    }
+
+                    sendMessage(kickedUserSocket, "");
                     close(kickedUserSocket);
                 } else {
                     sendMessage(clientSocket, "User not found!");
@@ -246,17 +262,16 @@ void handleClient(int clientSocket) {
                     lock_guard<mutex> lock(clientMutex);
                     string channel = clients[clientSocket].channel;
                     for (int client : channels[channel]) {
-                        if(client != clientSocket){
-                            size_t pos = 0;
-                            while (pos < message.length()) {
-                                string chunk = message.substr(pos, MAX_BUFFER_SIZE - 1);
-                                ssize_t bytesSent = send(client, chunk.c_str(), chunk.length(), 0);
-                                if (bytesSent == -1) {
-                                    cout << "Failed to send message." << endl;
-                                    break;
-                                }
-                                pos += chunk.length();
+                        size_t pos = 0;
+                        while (pos < message.length()) {
+                            string chunk = message.substr(pos, MAX_BUFFER_SIZE - 1);
+                            ssize_t bytesSent = send(client, chunk.c_str(), chunk.length(), 0);
+                            if (bytesSent == -1) {
+                                cout << "Failed to send message." << endl;
+                                break;
                             }
+                            pos += chunk.length();
+                            if (pos < message.length()) message = clients[clientSocket].nickname + ": " + message;
                         }
                     }
                 }
