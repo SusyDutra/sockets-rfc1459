@@ -22,8 +22,8 @@ struct Client {
     int socket;
     string channel;
     string nickname;
-    bool mute = false;
     string ipAddress;
+    bool mute = false;
 };
 
 mutex clientMutex;
@@ -383,16 +383,16 @@ void printChannels(const map<string, vector<int>>& channels, const map<int, Clie
 
         if(channel.empty()) continue;
 
-        cout << "Channel: " << channel << endl;
+        cout << "\nChannel: " << channel << endl << endl;
 
         for (int clientSocket : clientSockets) {
             const Client& client = clients.at(clientSocket);
 
-            cout << "Client Socket: " << client.socket << endl;
             cout << "Nickname: " << client.nickname << endl;
+            cout << "Socket: " << client.socket << endl;
             cout << "Mute: " << (client.mute ? "True" : "False") << endl;
 
-            cout << "-----" << endl;
+            cout << "---------------------" << endl;
         }
 
         cout << endl;
