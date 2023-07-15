@@ -62,7 +62,7 @@ void listChannels(int clientSocket) {
     string message = "Existing channels: ";
     for (const auto& channelPair : channels) {
         const string& channelName = channelPair.first;
-        message += channelName + ", ";
+        message += channelName + "\n";
     }
     sendMessage(clientSocket, message);
 }

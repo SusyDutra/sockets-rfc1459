@@ -117,6 +117,7 @@ int main() {
             cout << endl << "Hello, " << userNickname << "! Welcome to the chat." << endl;
             cout << "Enjoy chatting with other people." << endl << endl;
             cout << "To join a channel, use the /join command" << endl;
+            cout << " Use /list to see all available channels" << endl;
 
             // Start receiving thread
             thread receiveThread(receiveMessages, clientSocket);
