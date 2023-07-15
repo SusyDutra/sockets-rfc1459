@@ -63,8 +63,7 @@ void receiveMessages(int clientSocket) {
                 cout << "User " + substrings.at(1) + " is inviting you to channel " + substrings.at(2) << endl;
                 cout << "type y to accept invitation or n to decline" << endl;
 
-                string commandLine;
-                getline(cin, commandLine);
+                string commandLine; getline(cin, commandLine);
 
                 while (commandLine != "y" && commandLine != "n") {
                     cout << "Invalid response. Type y to accept or n to decline" << endl;
