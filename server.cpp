@@ -23,7 +23,7 @@ struct Client {
     string channel;
     string nickname;
     bool mute = false;
-    string ipAddres;
+    string ipAddress;
 };
 
 mutex clientMutex;
@@ -58,6 +58,15 @@ void sendMessage(int clientSocket, const string& message) {
     }
 }
 
+void listChannels(int clientSocket) {
+    string message = "Existing channels: ";
+    for (const auto& channelPair : channels) {
+        const string& channelName = channelPair.first;
+        message += channelName + ", ";
+    }
+    sendMessage(clientSocket, message);
+}
+
 void handleClient(int clientSocket) {
     char buffer[MAX_BUFFER_SIZE];
     int numAttempts = 0;
@@ -74,7 +83,10 @@ void handleClient(int clientSocket) {
             } else if (message == "/ping") {
                 // Respond with "pong" for "/ping" command
                 sendMessage(clientSocket, "pong");
-            } else if (message.substr(0, 5) == "/join") {
+            } else if (message == "/list") {
+                listChannels(clientSocket);
+            } 
+            else if (message.substr(0, 5) == "/join") {
                 string channel = message.substr(6);
                 treatChannelName(channel);
 
@@ -112,17 +124,12 @@ void handleClient(int clientSocket) {
             else if (message.substr(0, 5) == "/kick") {
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
-                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    sendMessage(clientSocket, "Command valid only for administrator user");
                     continue;
                 }
 
                 string kickedUser = message.substr(6);
                 lock_guard<mutex> lock(clientMutex);
-
-                string message = message = "The user " + kickedUser + " has been banned!";
-                for(int client : channels[userChannel]){
-                    sendMessage(client, message);
-                }
 
                 // search the socket of the user the client wants to kick
                 int kickedUserSocket = -1;
@@ -132,11 +139,20 @@ void handleClient(int clientSocket) {
                     }
                 }
 
+                cout << kickedUser << endl;
                 // search for that socket on the user's channel
                 auto it = find(channels[userChannel].begin(), channels[userChannel].end(), kickedUserSocket);
                 if (it != channels[userChannel].end()) {
                     channels[userChannel].erase(it);
-                    sendMessage(kickedUserSocket, "You have been banned by the administrator!");
+                    cout << kickedUser<< endl;
+                    
+                    string message = "The user " + kickedUser + " has been banned!";
+                    for (int client : channels[userChannel]){
+                        cout << message << endl;
+                        sendMessage(client, message);
+                    }
+
+                    sendMessage(kickedUserSocket, "");
                     close(kickedUserSocket);
                 } else {
                     sendMessage(clientSocket, "User not found!");
@@ -145,7 +161,7 @@ void handleClient(int clientSocket) {
             else if (message.substr(0, 5) == "/mute") {
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
-                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    sendMessage(clientSocket, "Command valid only for administrator user");
                     continue;
                 }
 
@@ -170,14 +186,14 @@ void handleClient(int clientSocket) {
                     for (int client : channels[userChannel]) {
                         sendMessage(client, message);
                     }
-                    else {
-                        sendMessage(clientSocket, "User not found or already muted!");
+                } else {
+                    sendMessage(clientSocket, "User not found or already muted!");
                 }
             }
             else if (message.substr(0, 7) == "/unmute") {
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
-                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    sendMessage(clientSocket, "Command valid only for administrator user");
                     continue;
                 }
 
@@ -208,7 +224,7 @@ void handleClient(int clientSocket) {
             } else if (message.substr(0, 6) == "/whois"){
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
-                    sendMessage(clientSocket, "Comando válido somente para usuário administrador");
+                    sendMessage(clientSocket, "Command valid only for administrator user");
                     continue;
                 }
 
@@ -243,17 +259,16 @@ void handleClient(int clientSocket) {
                     lock_guard<mutex> lock(clientMutex);
                     string channel = clients[clientSocket].channel;
                     for (int client : channels[channel]) {
-                        if(client != clientSocket){
-                            size_t pos = 0;
-                            while (pos < message.length()) {
-                                string chunk = message.substr(pos, MAX_BUFFER_SIZE - 1);
-                                ssize_t bytesSent = send(client, chunk.c_str(), chunk.length(), 0);
-                                if (bytesSent == -1) {
-                                    cout << "Failed to send message." << endl;
-                                    break;
-                                }
-                                pos += chunk.length();
+                        size_t pos = 0;
+                        while (pos < message.length()) {
+                            string chunk = message.substr(pos, MAX_BUFFER_SIZE - 1);
+                            ssize_t bytesSent = send(client, chunk.c_str(), chunk.length(), 0);
+                            if (bytesSent == -1) {
+                                cout << "Failed to send message." << endl;
+                                break;
                             }
+                            pos += chunk.length();
+                            if (pos < message.length()) message = clients[clientSocket].nickname + ": " + message;
                         }
                     }
                 }
@@ -287,6 +302,8 @@ void handleClient(int clientSocket) {
 
 void signalHandler(int signal) {
     if (signal == SIGINT) {
+        cout << "\033[2K\r";  // Apaga a linha atual
+        cout.flush();  // Limpa o buffer de saída
         cout << "Server shutting down..." << endl;
         exit(0);
     }
@@ -349,11 +366,6 @@ int main() {
         // Start a new thread to handle the client
         thread clientThread(handleClient, clientSocket);
         clientThread.detach();
-
-        // Send a welcome message to the new client
-        string welcomeMsg = "Welcome to the chat server! now type /nickname your_nickname ";
-
-        send(clientSocket, welcomeMsg.c_str(), welcomeMsg.length(), 0);
     }
 
     return 0;

@@ -28,9 +28,10 @@ void receiveMessages(int clientSocket) {
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesRead > 0) {
-            cout << "Server response: " << buffer << endl;
+            cout << buffer << endl;
         } else if (bytesRead == 0) {
             cout << "Server closed the connection." << endl;
+            close(clientSocket);
             exit(0);
         } else {
             cerr << "Error receiving response." << endl;
@@ -75,7 +76,7 @@ int main() {
     cout << "Enter the desired command: /connect to connect to the server or /quit to terminate the program" << endl;
 
     while (true) {
-        string command;
+        string command, userNickname;
         getline(cin, command);
 
         if (command == "/connect") {
@@ -154,9 +155,6 @@ int main() {
                     // Send message to server
                     sendMessage(clientSocket, message);
                 } 
-        
-                // Send message to server
-                sendMessage(clientSocket, message);
             }
 
             // Join the receive thread to ensure it has finished execution
