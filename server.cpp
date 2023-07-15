@@ -71,10 +71,12 @@ void handleClient(int clientSocket) {
             if (message == "/quit") {
                 // Close connection for "/quit" command
                 break;
-            } else if (message == "/ping") {
+            }
+            else if (message == "/ping") {
                 // Respond with "pong" for "/ping" command
                 sendMessage(clientSocket, "pong");
-            } else if (message.substr(0, 5) == "/join") {
+            }
+            else if (message.substr(0, 5) == "/join") {
                 string channel = message.substr(6);
                 treatChannelName(channel);
 
@@ -205,7 +207,8 @@ void handleClient(int clientSocket) {
                 } else {
                     sendMessage(clientSocket, "User not found or not muted!");
                 }
-            } else if (message.substr(0, 6) == "/whois"){
+            }
+            else if (message.substr(0, 6) == "/whois") {
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
                     sendMessage(clientSocket, "Command valid only for admin user");
@@ -263,10 +266,12 @@ void handleClient(int clientSocket) {
                 }
                 numAttempts = 0;  // Reset attempts
             }
-        } else if (bytesRead == 0) {
+        }
+        else if (bytesRead == 0) {
             // Connection closed by client
             break;
-        } else {
+        }
+        else {
             // Error or timeout
             numAttempts++;
         }
@@ -360,6 +365,8 @@ void printChannels(const map<string, vector<int>>& channels, const map<int, Clie
     for (const auto& channelPair : channels) {
         const string& channel = channelPair.first;
         const vector<int>& clientSockets = channelPair.second;
+
+        if(channel.empty()) continue;
 
         cout << "Channel: " << channel << endl;
 
