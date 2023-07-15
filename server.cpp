@@ -315,7 +315,7 @@ int main() {
     }
 
     // Listen for incoming connections
-    if (listen(serverSocket, 10) == -1) {
+    if (listen(serverSocket, SOMAXCONN) == -1) {
         cerr << "Failed to listen on socket." << endl;
         return 1;
     }
@@ -335,8 +335,16 @@ int main() {
             continue;
         }
 
+        // Obter o endereço IP do cliente
+        string clientIP = inet_ntoa(clientAddr.sin_addr);
+
+        // Create a new client structure
+        Client client;
+        client.socket = clientSocket;
+        client.ipAddress = clientIP;
+
         lock_guard<mutex> lock(clientMutex);
-        clients[clientSocket] = {clientSocket, ""};
+        clients[clientSocket] = client;
 
         // Start a new thread to handle the client
         thread clientThread(handleClient, clientSocket);
