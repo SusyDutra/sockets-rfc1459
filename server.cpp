@@ -186,7 +186,8 @@ void handleClient(int clientSocket) {
                     for (int client : channels[userChannel]) {
                         sendMessage(client, message);
                     }
-                } else {
+                }
+                else{
                     sendMessage(clientSocket, "User not found or already muted!");
                 }
             }
@@ -319,7 +320,7 @@ int main() {
         cerr << "Failed to create socket." << endl;
         return 1;
     }
-    
+
     // Set up server address
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_addr.s_addr = INADDR_ANY;
