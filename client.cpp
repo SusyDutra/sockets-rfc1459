@@ -4,6 +4,9 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+#include <chrono>
+#include <mutex>
+#include <condition_variable>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -16,6 +19,11 @@ const int SERVER_PORT = 8080;
 int clientSocket;
 
 using namespace std;
+
+mutex inputMutex;
+condition_variable cv;
+bool isInvited = false;
+string invitedChannel, inviteResponse;
 
 vector<string> split(const string& str, char delimiter) {
     vector<string> tokens;
@@ -60,21 +68,22 @@ void receiveMessages(int clientSocket) {
             string message(buffer);
             if(message.substr(0, 7) == "/invite") {
                 vector<string> substrings = split(message, ' ');
-                cout << "User " + substrings.at(1) + " is inviting you to channel " + substrings.at(2) << endl;
+                cout << "User " + substrings[1] + " is inviting you to channel " + substrings[2] << endl;
                 cout << "type y to accept invitation or n to decline" << endl;
 
-                string commandLine; getline(cin, commandLine);
+                unique_lock<mutex> lock(inputMutex);
+                // Liberar leitura para o usuário responder ao convite
+                isInvited = true;
+                invitedChannel = substrings[2];
+                cv.notify_one(); // Notificar a thread principal que a resposta está pronta para ser lida
 
-                while (commandLine != "y" && commandLine != "n") {
-                    cout << "Invalid response. Type y to accept or n to decline" << endl;
-                    getline(cin, commandLine);
-                }
+                // Esperar pela resposta do usuário
+                cv.wait(lock, [] { return isInvited == false; });
 
-                if (commandLine == "y") {
-                    message = "/join " + substrings.at(2);
-                    sendMessage(clientSocket, message);
-                }
-                else { // n
+                if (inviteResponse == "y") {
+                    string joinMessage = "/join " + invitedChannel;
+                    sendMessage(clientSocket, joinMessage);
+                } else {
                     cout << "n quero n" << endl;
                 }
             }
@@ -108,8 +117,6 @@ int main() {
 
     signal(SIGINT, signalHandler);
 
-    char buffer[MAX_BUFFER_SIZE];
-
     cout << "Welcome to IRC Chat!" << endl;
     cout << "Enter the desired command: /connect to connect to the server or /quit to terminate the program" << endl;
 
@@ -142,30 +149,40 @@ int main() {
 
             cout << "Socket info: IP = " << ipBuffer << ", Port = " << port << endl;
 
+            // Start receiving thread
+            thread receiveThread(receiveMessages, clientSocket);
+
             cout << "You need to choose a nickname, use the command /nickname for that" << endl;
             getline(cin, command);
             while (command.substr(0, 9) != "/nickname" || command.length() < 10) {
                 cout << "You need to choose a nickname before accessing other functionalities!" << endl;
                 cout << "Choose one using the /nickname command" << endl << endl;
                 getline(cin, command);
+                
+                if (command.empty() || command == "/quit") {
+                    close(clientSocket);
+                    exit(0);
+                }
             }
-            string userNickname = command.substr(10);
             sendMessage(clientSocket, command);
+            string userNickname = command.substr(10);
 
             cout << endl << "Hello, " << userNickname << "! Welcome to the chat." << endl;
             cout << "Enjoy chatting with other people." << endl << endl;
             cout << "To join a channel, use the /join command" << endl;
-            cout << " Use /list to see all available channels" << endl;
+            cout << "Use /list to see all available channels" << endl;
 
-            // Start receiving thread
-            thread receiveThread(receiveMessages, clientSocket);
-    
             while (true) {
                 string message;
                 getline(cin, message);
 
+                if (isInvited) {
+                    inviteResponse = message;
+                    isInvited = false;
+                    cv.notify_one(); // Notificar a thread de recebimento que a resposta está pronta
+                }
                 // Check for command input
-                if (message.empty() || message == "/quit") {
+                else if (message.empty() || message == "/quit") {
                     message = "/quit";
                     sendMessage(clientSocket, message);
                     break;
@@ -192,6 +209,12 @@ int main() {
                 else if (message.substr(0, 6) == "/whois") {
                     if (message.length() < 7) cout << "Incomplete command!" << endl;
                     else if (message.substr(7) == userNickname) cout << "The command cannot be used on yourself!" << endl;
+                    else sendMessage(clientSocket, message);
+                } 
+                else if (message.substr(0, 7) == "/invite") {
+                    vector<string> substr = split(message, ' ');
+                    if ((int) substr.size() < 3) cout << "Incomplete command!" << endl;
+                    else if (substr[1] == userNickname) cout << "The command cannot be used on yourself!" << endl;
                     else sendMessage(clientSocket, message);
                 } 
                 else {

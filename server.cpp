@@ -90,6 +90,10 @@ void handleClient(int clientSocket) {
             else if (message == "/list") {
                 listChannels(clientSocket);
             } 
+            else if (message.substr(0, 9) == "/nickname") {                         
+                clients[clientSocket].nickname = message.substr(10);   
+                cout << "New client: " << clients[clientSocket].nickname << endl;
+            }
             else if (message.substr(0, 5) == "/join") {
                 string channel = message.substr(6);
                 treatChannelName(channel);
@@ -120,10 +124,6 @@ void handleClient(int clientSocket) {
 
                 printChannels(channels, clients);
             }
-            else if (message.substr(0, 9) == "/nickname") {
-                clients[clientSocket].nickname = message.substr(10);
-                cout << "New client: " << clients[clientSocket].nickname << endl;
-            }
             else if (message.substr(0, 5) == "/kick") {
                 string userChannel = clients[clientSocket].channel;
                 if (channels[userChannel][0] != clientSocket) {
@@ -136,7 +136,7 @@ void handleClient(int clientSocket) {
 
                 // search the socket of the user the client wants to kick
                 int kickedUserSocket = -1;
-                for(int i = 0; i < channels[userChannel].size(); i++){
+                for(int i = 0; i < (int) channels[userChannel].size(); i++){
                     if(clients[channels[userChannel][i]].nickname == kickedUser){
                         kickedUserSocket = clients[channels[userChannel][i]].socket;
                     }
@@ -173,7 +173,7 @@ void handleClient(int clientSocket) {
 
                 // search the socket of the user the client wants to mute
                 int mutedUserSocket = -1;
-                for(int i = 0; i < channels[userChannel].size(); i++){
+                for(int i = 0; i < (int) channels[userChannel].size(); i++){
                     if(clients[channels[userChannel][i]].nickname == mutedUser){
                         mutedUserSocket = clients[channels[userChannel][i]].socket;
                     }
@@ -206,7 +206,7 @@ void handleClient(int clientSocket) {
 
                 // search the socket of the user the client wants to unmute
                 int unmutedUserSocket = -1;
-                for(int i = 0; i < channels[userChannel].size(); i++){
+                for(int i = 0; i < (int) channels[userChannel].size(); i++){
                     if(clients[channels[userChannel][i]].nickname == unmutedUser){
                         unmutedUserSocket = clients[channels[userChannel][i]].socket;
                     }
@@ -238,7 +238,7 @@ void handleClient(int clientSocket) {
 
                 // search the socket of the user the client wants to unmute
                 int wantedUserSocket = -1;
-                for(int i = 0; i < channels[userChannel].size(); i++){
+                for(int i = 0; i < (int) channels[userChannel].size(); i++){
                     if(clients[channels[userChannel][i]].nickname == wantedUser){
                         wantedUserSocket = clients[channels[userChannel][i]].socket;
                         break;
@@ -265,7 +265,7 @@ void handleClient(int clientSocket) {
                 }
 
                 vector<string> substrings = split(message, ' ');
-                string invitedUser = substrings.at(1);
+                string invitedUser = substrings[1];
 
                 int invitedUserSocket = -1;
                 for (const auto& clientPair : clients) {
@@ -279,7 +279,7 @@ void handleClient(int clientSocket) {
                     sendMessage(clientSocket, "User not found at any channel");
                 }
                 else{ // redirect the command to client side (the invited client)
-                    string destChannel = substrings.at(2);
+                    string destChannel = substrings[2];
                     string message = "/invite " + clients[clientSocket].nickname + " " + destChannel;
                     sendMessage(invitedUserSocket, message);
                 }
