@@ -84,7 +84,7 @@ void receiveMessages(int clientSocket) {
                     string joinMessage = "/join " + invitedChannel;
                     sendMessage(clientSocket, joinMessage);
                 } else {
-                    cout << "n quero n" << endl;
+                    cout << "declining..." << endl;
                 }
             }
             else {

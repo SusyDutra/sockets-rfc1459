@@ -4,7 +4,7 @@
 CXX := g++
 
 # Flags
-CXXFLAGS := -std=c++11 -Wall
+CXXFLAGS := -std=c++11 -Wall -pthread
 
 # Source files
 SERVER_SRC := server.cpp

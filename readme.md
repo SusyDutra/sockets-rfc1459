@@ -16,7 +16,7 @@ This is a simple IRC (Internet Relay Chat) chat application that allows multiple
 1. Compile the server and client codes using the g++ compiler. Make sure to include the necessary libraries while compiling.
    ```bash
    g++ -o server server.cpp -lpthread
-   g++ -o client client.cpp
+   g++ -o client client.cpp -lpthread
    ```
 
 2. Run the server in one terminal:
@@ -71,7 +71,7 @@ client: client.cpp
 	g++ -o client client.cpp
 
 clean:
-	rm -f server client
+	rm -f server client -lpthread
 ```
 
 To compile the project and create both the server and client executables, simply run:
