@@ -5,8 +5,8 @@ Segundo trabalho prático da disciplina SSC0142-Redes de Computadores
 This is a simple IRC (Internet Relay Chat) chat application that allows multiple clients to connect to a server and communicate with each other in different channels. The project includes both the server and client components.
 
 **Project Members:**
-- Guilherme Sousa Panza
-- Susy da Costa Dutra
+- Guilherme Sousa Panza - Nº USP: 12543519
+- Susy da Costa Dutra - Nº USP: 12694007
 
 **System Requirements:**
 - Operating System: Linux Mint 21 (or any other Linux distribution)
