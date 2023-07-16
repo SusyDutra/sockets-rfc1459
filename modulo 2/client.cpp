@@ -4,9 +4,7 @@
 #include <sstream>
 #include <thread>
 #include <vector>
-#include <chrono>
 #include <mutex>
-#include <condition_variable>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -21,21 +19,6 @@ int clientSocket;
 using namespace std;
 
 mutex inputMutex;
-condition_variable cv;
-bool isInvited = false;
-string invitedChannel, inviteResponse;
-
-vector<string> split(const string& str, char delimiter) {
-    vector<string> tokens;
-    stringstream ss(str);
-    string token;
-
-    while (getline(ss, token, delimiter)) {
-        tokens.push_back(token);
-    }
-
-    return tokens;
-}
 
 void signalHandler(int signal) {
     if (signal == SIGINT) {
@@ -65,31 +48,7 @@ void receiveMessages(int clientSocket) {
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesRead > 0) {
-            string message(buffer);
-            if(message.substr(0, 7) == "/invite") {
-                vector<string> substrings = split(message, ' ');
-                cout << "User " + substrings[1] + " is inviting you to channel " + substrings[2] << endl;
-                cout << "type y to accept invitation or n to decline" << endl;
-
-                unique_lock<mutex> lock(inputMutex);
-                // Liberar leitura para o usuário responder ao convite
-                isInvited = true;
-                invitedChannel = substrings[2];
-                cv.notify_one(); // Notificar a thread principal que a resposta está pronta para ser lida
-
-                // Esperar pela resposta do usuário
-                cv.wait(lock, [] { return isInvited == false; });
-
-                if (inviteResponse == "y") {
-                    string joinMessage = "/join " + invitedChannel;
-                    sendMessage(clientSocket, joinMessage);
-                } else {
-                    cout << "declining..." << endl;
-                }
-            }
-            else {
-                cout << buffer << endl;
-            }
+            cout << buffer << endl;
         } else if (bytesRead == 0) {
             cout << "Server closed the connection." << endl;
             close(clientSocket);
@@ -169,54 +128,16 @@ int main() {
 
             cout << endl << "Hello, " << userNickname << "! Welcome to the chat." << endl;
             cout << "Enjoy chatting with other people." << endl << endl;
-            cout << "To join a channel, use the /join command" << endl;
-            cout << "Use /list to see all available channels" << endl;
 
             while (true) {
                 string message;
                 getline(cin, message);
 
-                if (isInvited) {
-                    inviteResponse = message;
-                    isInvited = false;
-                    cv.notify_one(); // Notificar a thread de recebimento que a resposta está pronta
-                }
-                // Check for command input
-                else if (message.empty() || message == "/quit") {
+                if (message.empty() || message == "/quit") {
                     message = "/quit";
                     sendMessage(clientSocket, message);
                     break;
                 }
-                else if (message.substr(0, 5) == "/join") {
-                    if (message.length() < 6) cout << "Incomplete command!" << endl;
-                    else sendMessage(clientSocket, message);
-                }
-                else if (message.substr(0, 5) == "/kick") {
-                    if (message.length() < 6) cout << "Incomplete command!" << endl;
-                    else if (message.substr(6) == userNickname) cout << "The command cannot be used on yourself!" << endl;
-                    else sendMessage(clientSocket, message);
-                }
-                else if (message.substr(0, 5) == "/mute") {
-                    if (message.length() < 6) cout << "Incomplete command!" << endl;
-                    else if (message.substr(6) == userNickname) cout << "The command cannot be used on yourself!" << endl;
-                    else sendMessage(clientSocket, message);
-                }
-                else if (message.substr(0, 7) == "/unmute") {
-                    if (message.length() < 8) cout << "Incomplete command!" << endl;
-                    else if (message.substr(8) == userNickname) cout << "The command cannot be used on yourself!" << endl;
-                    else sendMessage(clientSocket, message);
-                }
-                else if (message.substr(0, 6) == "/whois") {
-                    if (message.length() < 7) cout << "Incomplete command!" << endl;
-                    else if (message.substr(7) == userNickname) cout << "The command cannot be used on yourself!" << endl;
-                    else sendMessage(clientSocket, message);
-                } 
-                else if (message.substr(0, 7) == "/invite") {
-                    vector<string> substr = split(message, ' ');
-                    if ((int) substr.size() < 3) cout << "Incomplete command!" << endl;
-                    else if (substr[1] == userNickname) cout << "The command cannot be used on yourself!" << endl;
-                    else sendMessage(clientSocket, message);
-                } 
                 else {
                     // Send message to server
                     sendMessage(clientSocket, message);
@@ -228,7 +149,7 @@ int main() {
 
             // Close the connection
             close(clientSocket);
-        
+
             break;
         } else if (command.empty() || command == "/quit") {
             break;
