@@ -25,17 +25,7 @@ condition_variable cv;
 bool isInvited = false;
 string invitedChannel, inviteResponse;
 
-vector<string> split(const string& str, char delimiter) {
-    vector<string> tokens;
-    stringstream ss(str);
-    string token;
-
-    while (getline(ss, token, delimiter)) {
-        tokens.push_back(token);
-    }
-
-    return tokens;
-}
+vector<string> split(const string& str, char delimiter);
 
 void signalHandler(int signal) {
     if (signal == SIGINT) {
@@ -238,4 +228,16 @@ int main() {
     }
 
     return 0;
+}
+
+vector<string> split(const string& str, char delimiter) {
+    vector<string> tokens;
+    stringstream ss(str);
+    string token;
+
+    while (getline(ss, token, delimiter)) {
+        tokens.push_back(token);
+    }
+
+    return tokens;
 }

@@ -33,19 +33,7 @@ map<string, vector<int>> channels;
 
 void printChannels(const map<string, vector<int>>& channels, const map<int, Client>& clients);
 vector<string> split(const string& str, char delimiter);
-
-void treatChannelName(string& newChannel){
-    if(newChannel[0] != '#' && newChannel[0] != '&'){
-        newChannel.insert(newChannel.begin(), '#');
-    }
-
-    for (size_t i = 0; i < newChannel.length(); i++) {
-        if (newChannel[i] == ' ' || newChannel[i] == ',' || int(newChannel[i]) == 17) {
-            newChannel.erase(i, 1);
-            i--;  // Update index so that we don´t jump characters
-        }
-    }
-}
+void treatChannelName(string& newChannel);
 
 void sendMessage(int clientSocket, const string& message) {
     size_t pos = 0;
@@ -438,4 +426,17 @@ vector<string> split(const string& str, char delimiter) {
     }
 
     return tokens;
+}
+
+void treatChannelName(string& newChannel){
+    if(newChannel[0] != '#' && newChannel[0] != '&'){
+        newChannel.insert(newChannel.begin(), '#');
+    }
+
+    for (size_t i = 0; i < newChannel.length(); i++) {
+        if (newChannel[i] == ' ' || newChannel[i] == ',' || int(newChannel[i]) == 17) {
+            newChannel.erase(i, 1);
+            i--;  // Update index so that we don´t jump characters
+        }
+    }
 }
