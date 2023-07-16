@@ -68,10 +68,10 @@ server: server.cpp
 	g++ -o server server.cpp -lpthread
 
 client: client.cpp
-	g++ -o client client.cpp
+	g++ -o client client.cpp -lpthread
 
 clean:
-	rm -f server client -lpthread
+	rm -f server client
 ```
 
 To compile the project and create both the server and client executables, simply run:
